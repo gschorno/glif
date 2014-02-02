@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>glif multiple image mixing demo</title>
+
+<link rel="stylesheet" type="text/css" href="../css/demo.css">
+
+<script type="text/javascript" src="../../src/glif-base.js"></script>
+<script type="text/javascript" src="../../src/glif-glsl.js"></script>
+<script type="text/javascript" src="../../src/glif-math.js"></script>
+<script type="text/javascript" src="../../src/glif-classes.js"></script>
+<script type="text/javascript" src="../../src/glif-functions.js"></script>
+
+<!--script type="text/javascript" src="../../glif.min.js"></script-->
+
+<style>
+.column {
+  width:400px; 
+}
+.titlebar {
+  position:relative;
+}
+</style>
+
+</head>
+<body>
+
+<div class="topbar">
+Animated Mixing Demo
+<a href="../index.html">glif library</a>
+</div>
+
+
+<div class="main">
+
+
+<div class="line">
+view input: 0<input type="radio" name="filter" onchange="setInputDisplay(0);" checked/>
+1<input type="radio" name="filter" onchange="setInputDisplay(1);" />
+2<input type="radio" name="filter" onchange="setInputDisplay(2);" />
+3<input type="radio" name="filter" onchange="setInputDisplay(3);" />
+4<input type="radio" name="filter" onchange="setInputDisplay(4);" />
+
+</div>
+
+<div class="imgpanel" id="inputs0">
+<canvas class="bg-checkered" id="canvasSrc0" width="480" height="300"></canvas>
+<div class="imginfo">c0</div>
+</div>
+
+<div class="imgpanel" id="inputs1">
+<canvas class="bg-checkered" id="canvasSrc1" width="480" height="300"></canvas>
+<div class="imginfo">c1</div>
+</div>
+
+<div class="imgpanel" id="inputs2">
+<canvas class="bg-checkered" id="canvasSrc2" width="480" height="300"></canvas>
+<div class="imginfo">c2</div>
+</div>
+
+<div class="imgpanel" id="inputs3">
+<canvas class="bg-checkered" id="canvasSrc3" width="480" height="300"></canvas>
+<div class="imginfo">c3</div>
+</div>
+
+<div class="imgpanel" id="inputs4">
+<canvas class="bg-checkered" id="canvasSrc4" width="480" height="300"></canvas>
+<div class="imginfo">c4</div>
+</div>
+
+
+<div class="imgpanel">
+<canvas class="bg-checkered" id="canvasOut" width="480" height="300"></canvas>
+<div class="imginfo">output</div>
+</div>
+
+<div class="column">
+
+  <div class="line">
+  expression:
+  <select id="exprselect" name="expr_select">
+  <option value="slices" selected>slices</option>
+  <option value="c0mixc1">c0 &lt;- c1</option>
+  <option value="curvyskies">curvy skies</option>
+  <option value="fadeoveralpha">fade over alpha</option>
+  <option value="mix5test">mix5 test</option>
+  <option value="fadeintofade">fade into fade</option>
+
+  </select>
+  <input id="animate" type="checkbox" value="animate" checked="yes" >animate</input>  
+
+  </div>
+
+  <textarea id="exprtext" rows="6" cols="50" spellcheck="false" ></textarea>
+
+  <button class="errorinfo" id="shadererror"/>error</button>
+  
+</div>
+
+</div>
+
+<script>
+
+window.onload = main;
+
+var _env, 
+  canvasSrc = [null, null, null, null, null], // these are the input layers to the shader program
+  canvasOut,  
+  imageUrls = ['../images/redrose.jpg','../images/tree.jpg','../images/alpha.png','../images/sky.jpg', '../images/bird.jpg' ],
+  loadct = 0,
+  errorbutton, textchanged = false;
+
+
+
+var stackblender,
+  blendproperties = { 
+
+  // custom functions for this application
+  functions: [ 
+  // mix input colors by normalized weights
+    'vec4 mix5(float w0, float w1, float w2, float w3, float w4, vec4 c0, vec4 c1, vec4 c2, vec4 c3, vec4 c4) { \n' +
+      '  float s = w0 + w1 + w2 + w3 + w4; \n' +
+      '  return (s == 0.) ? vec4(0, 0, 0, 1) : vec4(w0 * c0 / s + w1 * c1 / s + w2 * c2 / s + w3 * c3 / s + w4 * c4 / s); \n' +
+      '} \n' + 
+    'vec4 mix5c(float w0, float w1, float w2, float w3, float w4, vec4 c0, vec4 c1, vec4 c2, vec4 c3, vec4 c4) { \n' +
+      '  return mix5(clamp(w0, 0., 1.), clamp(w1, 0., 1.), clamp(w2, 0., 1.), clamp(w3, 0., 1.), clamp(w4, 0., 1.), c0, c1, c2, c3, c4); \n' +
+      '} \n',
+
+    // mix clamp
+    'float mixc(float v0, float v1, float m) { return mix(v0, v1, clamp(m, 0., 1.)); } \n',
+    'vec3 mixc(vec3 v0, vec3 v1, float m) { return mix(v0, v1, clamp(m, 0., 1.)); } \n',
+    'vec4 mixc(vec4 v0, vec4 v1, float m) { return mix(v0, v1, clamp(m, 0., 1.)); } \n',
+  ],
+
+  // custom uniforms added to shader text program
+  uniforms:  [ 'int frame;', 'float time;' ], // todo auto generate these from properties
+  //locals:  [ 'float t0, t1, t2, t3;' ], // make temp variables available
+
+  // run properties (uniform values)
+   properties: { 
+    frame: { value: frame, type:'int' },
+    time: { value: time, type:'float' }
+  },
+};
+
+function main() {
+
+  if (!glif.webGLSupport(alert)) return;
+
+  canvasOut = document.getElementById('canvasOut');
+  errorbutton = document.getElementById('shadererror');
+
+  canvasOut.onclick = function () { setPause(!pause); };
+  errorbutton.onclick = function (e) { alert(lasterror); }; // todo put this text in a nice div somewhere
+
+  _env = glif.getEnv(canvasOut);
+  if (!_env) return; // failed
+
+  document.getElementById('animate').onclick = function (e) { 
+    setPause(!e.currentTarget.checked); 
+  };
+
+  document.getElementById('exprtext').value = exprs.slices;
+
+  document.getElementById('exprselect').addEventListener('change', function (e) {
+    document.getElementById('exprtext').value = exprs[e.currentTarget.value];
+    update();
+  }, false);
+
+  document.getElementById('exprtext').addEventListener('change', function (e) {
+    var textchanged = true;
+  }, false);
+
+  setInputDisplay(0);
+
+  // load images
+  function loadToCanvas(url, drawcanvas) {
+    var image = new Image();
+
+    image.onload = function () {
+      drawcanvas.getContext('2d').drawImage(image, 0, 0);
+      if (++loadct == 5)
+        animate();
+    };
+    image.src = url;
+  }
+
+  for (var i = 0; i < 5; i++) {
+    canvasSrc[i] = document.getElementById('canvasSrc'+i);
+    loadToCanvas(imageUrls[i], canvasSrc[i]);
+  }
+ 
+}
+
+function setInputDisplay(index) {
+
+  for (var i = 0; i < 5; i++) {
+    if (i === index) {
+     document.getElementById('inputs'+i).classList.remove('hidden');
+    }
+    else {
+     document.getElementById('inputs'+i).classList.add('hidden');
+   }
+  }
+}
+
+
+exprs = {
+  c0mixc1: 'vec4(mixc(c1, c0, pow(2. * abs(sin(x * 0.7 + c0.r - (c0.g * 0.5) + time*0.2)), 5.0) - 1. ).rgb, 1.)',
+
+  curvyskies: 'vec4(mixc(c1,c3,pow(abs(.65+(dot(x-1.35,y+6.5))*sin(time*2.6+(x-.5)*y*10.+15.*sin(y+1.8*sin(time*.52)))),13.)))',
+
+  fadeintofade: 'vec4(mix(c1, c4, 0.5 * (1. + sin(c1.r*17.*c4.g-c4.b*c1.g*5. + time))).rgb, 1.)',
+
+  mix5test: 'mix5c(\npow(mod(x=(x+time*0.1), 1.),7.),\npow(mod((x+1./4.), 1.),7.),\n0.,\npow(mod((x+2./4.), 1.),7.),\npow(mod((x+3./4.), 1.),7.),\nc0, c1, c2, c3, c4)',
+
+  fadeoveralpha: 'vec4(\nc2.a*c2.a*mixc(c3, c1, pow(2. * abs(sin(x * 0.7 + c2.r - (c2.a * 0.5) + time*0.1)), 5.0) - 1. ).rgb,\nc2.a*c2.a)',
+
+  slices: 'vec4(((x - 0.4) * (y - 0.74) * 1.3 < 0.6 * sin((y - 0.3) * (x - 0.2) + time * 0.2)) ? \n\n((mod(sin(x * 1.13 - sin(time * 0.118)), .4 * (y - 0.3) * (x - .7) + 0.21) < mod((x * sin(y * 1.2 + sin(time * 0.145))), .3 * (x - .35) * (y - .65) + 0.2)) ? c0 : c1) :\n\n((mod(sin(x * 1.3 - sin(time * 0.118)), .14*y*(x-.7)+0.24) < mod(sin(y * 1.02 + sin(time * 0.145)), .2 * (x - .35) * (y - .35) + 0.1)) ? \nc3 : c4)\n)'
+};
+
+
+var StackBlender = function (glenv, images, options) {
+
+  var _program, _textures = [], _expr;
+
+  for (var i=0; i< images.length; i++) {
+    _textures.push(glenv.createTexture(images[i]));
+  }
+
+  this.setExpr = function (expr) { 
+    if (expr === _expr) return true;
+
+    this.lasterror = null;
+
+    var shadertext = glif.glsl.getSampleStackShaderText (images.length, expr, options);
+
+    _program = glenv.createProgram(shadertext, function (e) { this.lasterror = e; }); 
+
+    if (!_program) { 
+      _expr = null;
+      return; // failed
+    }
+
+    _expr = expr;
+    return true;
+  };
+
+  // "Renderer, a class where inputs are already established, just point it at the output" hmm
+  this.render = function (outtexture) {
+    _program.run(_textures, outtexture, options.properties);
+  };
+
+  return this;
+};
+
+
+var pause = false, frame = 0, time = 0, lasttime, error = false;
+
+
+function setPause(val) {
+  pause = (typeof val === 'undefined') ? true : val;
+  if (pause) lasttime = null;
+  document.getElementById('animate').checked = !pause;
+}
+
+function update() {
+
+  try {
+
+    // update timer properties for animation
+    blendproperties.properties.frame.value = frame;
+    var now = new Date();
+    if (lasttime )  {
+      var diff = (now - lasttime)*0.001;
+      time += (diff > 0.4) ? 0 : diff;
+    }
+    blendproperties.properties.time.value = time;
+    lasttime = now;
+
+    if (!stackblender) {
+
+      // stackblender gets a reference to the properties object above, so we can
+      // change the program properties by just writing the values to blendproperties
+      stackblender = new StackBlender(_env, canvasSrc, blendproperties);
+      textchanged = true;
+    }
+
+    if (textchanged) {
+      error = !stackblender.setExpr(document.getElementById('exprtext').value);
+      if (error) errorbutton.classList.remove('hidden');
+      else errorbutton.classList.add('hidden');
+    }
+    if (error) return;
+
+    stackblender.render();
+
+  } catch (e) {
+    alert('exception: ' + e);
+    error = true; 
+    return;
+  }
+
+  frame++;
+}
+
+function setProperty(name, val) {
+  params[name] = (typeof val === 'string') ? parseFloat(val) : val;
+  if (loadct == 2 && pause) // play one frame
+    update();
+}
+
+function animate () {
+  if (!pause) {
+    update(); 
+  }
+
+  requestAnimFrame(animate);
+}
+
+</script>
+
+</body>
+</html>

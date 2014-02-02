@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>glif library effect example</title>
+
+<link rel="stylesheet" type="text/css" href="../css/demo.css">
+
+<script type="text/javascript" src="../../glif.min.js"></script>
+
+<script>
+
+window.onload = apply;
+
+var effect_text = " vec4 ( pow ( c.rgb, vec3(1.5) ), c.a ) ";
+
+function apply() {
+
+  if (!glif.webGLSupport(alert)) { return; }
+
+  // -- set up image effect
+
+  // glif environment to draw effect output
+  var _envOutput = glif.getEnv("output_canvas");
+  // some browsers iOS Safari show WebGL support, but its either not available or disabled
+  if (!_envOutput) return; 
+
+  var source_image = document.getElementById("source_image");
+
+  try {
+    // using source image as input, apply effect to the outputcanvas
+    _envOutput.effect(source_image, effect_text); 
+  } catch (e) {
+    alert('exception: ' + e);
+  }
+  
+}
+
+</script>
+
+</head>
+<body>
+
+<div class="topbar">
+Image Effect Example
+<a href="../index.html">glif library</a>
+</div>
+
+<div class="main">
+
+<div class="imgpanel">
+<img src="../images/tree.jpg" id="source_image" alt="input image" height="504" width="423">
+<div class="imginfo">source image</div>
+</div>
+<div class="imgpanel">
+<canvas id="output_canvas" height="504" width="423"></canvas>
+<div class="imginfo">effect output</div>
+</div>
+
+</body>
+</html>

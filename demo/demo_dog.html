@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Difference of Gaussians blur explorer</title>
+
+<link rel="stylesheet" type="text/css" href="../css/demo.css">
+
+<style>
+.column {
+  width:320px;
+}
+</style>
+
+<!--script type="text/javascript" src="../../src/glif-base.js"></script>
+<script type="text/javascript" src="../../src/glif-glsl.js"></script>
+<script type="text/javascript" src="../../src/glif-classes.js"></script>
+<script type="text/javascript" src="../../src/glif-functions.js"></script>
+<script type="text/javascript" src="../../src/glif-area.js"></script-->
+
+<script type="text/javascript" src="../../glif.min.js"></script>
+
+<script>
+
+var image, loaded, _env, 
+
+  blurparams0 = {
+    name: 'gaussian', 
+    radius: 20, 
+    sigma: 0.5,
+// bug, when passcount or maxradius is set (multiple blur passes), not all passes are applied
+//    passcount: 4, 
+//    maxradius: 16, 
+//    interleave: true,
+  },
+
+  blurparams1 = {
+    name: 'gaussian', 
+    radius: 4, 
+    sigma: 0.5,
+//    maxradius: 16,
+  };
+
+var images = ['../images/redrose.jpg', '../images/sky.jpg', '../images/tree.jpg', '../images/bird.jpg'];
+
+
+window.onload = main;
+
+
+function loadImage (url) {
+
+  image.onload = function () {
+    loaded = true;
+
+    var canvas = document.getElementById("canvas");
+    canvas.width = image.width; 
+    canvas.height = image.height;
+
+    update();
+  };
+
+  image.src = url;
+}
+
+function main () {
+
+  if (!glif.webGLSupport(alert)) { return; }
+
+  _env = glif.getEnv(canvas);
+  if (!_env) return; // failed
+
+  document.getElementById('scripttext').value = scripts.difference;
+
+  document.getElementById('scriptselect').addEventListener('change', function (e) {
+    document.getElementById('scripttext').value = scripts[e.currentTarget.value];
+    update();
+  }, false);
+
+  document.getElementById('imageselect').addEventListener('change', function (e) {
+    loadImage(images[parseInt(e.currentTarget.value)]);
+  }, false);
+
+  image = new Image();
+  loadImage(images[0]);
+}
+
+
+// edge detection by difference of gaussians
+function dog_blur (_env, image, params0, params1) {
+
+  var inputTexture = _env.createTexture(image);
+  var blur0Texture = _env.createTexture(image.width, image.height);
+  var blur1Texture = _env.createTexture(image.width, image.height);
+
+  _env.blur (inputTexture, params0, blur0Texture);
+  _env.blur (inputTexture, params1, blur1Texture);
+
+  // adding the input image to the mix 
+  var options = { 
+    expr: document.getElementById('scripttext').value, 
+    varnames: ['cBlur0', 'cBlur1', 'cSrc'] 
+  };
+  _env.blendStack ([blur0Texture, blur1Texture, inputTexture], options );
+}
+
+
+function render() {
+  try {
+    dog_blur(_env, image, blurparams0, blurparams1,
+         function (e) { alert('error creating blur shader, ' + e); }
+       );
+  } catch (e) {
+    alert('exception: ' + e);
+  }
+}
+
+function update() {
+
+  updateStatus();
+
+  var start = new Date();
+  if (loaded) render();
+  document.getElementById('time').innerHTML = ((new Date()) - start) + ' ms';
+}
+
+// draw blur radiuses
+function drawRadii() {
+  var canvas = document.getElementById('chartcanvas'),
+    ctx = canvas.getContext('2d');
+
+  ctx.rect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'white';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#555';
+  ctx.arc(canvas.width/2, canvas.height/2, blurparams0.radius, 0, 2 * Math.PI, false);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(canvas.width/2, canvas.height/2, blurparams1.radius, 0, 2 * Math.PI, false);
+  ctx.stroke();
+}
+
+function updateStatus() {
+
+//  document.getElementById('filter').innerHTML = blurparams.filtername;
+  document.getElementById('radius0display').innerHTML = '' + blurparams0.radius;
+  document.getElementById('radius1display').innerHTML = '' + blurparams1.radius;
+
+  drawRadii();
+}
+
+function setRadius(i, v) {
+  if (i) blurparams1.radius = v; 
+  else blurparams0.radius = v;
+  update();
+}
+
+var scripts =  {
+
+  difference: 'vec4(\n2.*abs(cBlur0.rgb - cBlur1.rgb)\n, cSrc.a)',
+  subtract: 'vec4(\ncBlur1.rgb - cBlur0.rgb + 0.5\n, cSrc.a)',
+  add_subtract: 'vec4(\n(cBlur0.rgb - cBlur1.rgb + cSrc.rgb)\n, cSrc.a)',
+  difference_gray: 'vec4(\nvec3(distance(cBlur0.rgb, cBlur1.rgb))\n,cSrc.a)',
+  glow_2: 'vec4(\n2.*(cSrc * max(cBlur1,cBlur0)).rgb, cSrc.a)',
+  flat: 'vec4(\nmin(cBlur0, 2.*cBlur1 * cSrc).rgb,cBlur0.a)',  
+  focus_invert: 'vec4(\nabs(cSrc - ((1. - cBlur1) * cBlur0)).rgb\n,1.)',
+  metal: 'vec4(\nvec3(sign(cBlur0 - cBlur1)) * cSrc.rgb\n, cSrc.a)',  
+  puffed_glass: 'vec4(\n6. * cSrc.rgb * vec3(distance(cBlur0.rgb, cBlur1.rgb))\n, cSrc.a)',
+  glow_3: 'vec4(\n5. * (cSrc * max(cBlur1 * cBlur0,distance(cBlur0, cBlur1))).rgb\n, cSrc.a)',
+  edge_effect: 'vec4(\nvec3((sign(dot(cSrc - cBlur0 - 0.2, cBlur1 - cSrc)) < 0.) ? cSrc.rgb : cBlur0.rgb)\n, cSrc.a)',  
+  dream: 'vec4(vec3(cSrc.rgb + 4. * abs(cross(cBlur0.rgb, cBlur1.rgb))), cSrc.a)',
+  prettyglow: 'vec4(5. * abs(cBlur0.rgb - cBlur1.rgb) * cSrc.rgb, cSrc.a)',
+  transparent: 'vec4(1. - .14 *cSrc.rgb / abs(cBlur0.rgb * cBlur1.rgb), cSrc.a)',
+  original: 'cSrc',
+  blur0: 'cBlur0',
+  blur1: 'cBlur1'
+};
+
+</script>
+
+</head>
+<body>
+
+<div class="topbar">
+Difference of Gaussians Explorer
+<a href="/glif/pages/index.html">glif library</a>
+</div>
+
+<div class="main">
+
+<div class="imgpanel">
+<canvas id="canvas"></canvas>
+
+<div class="titlebar">
+<div class="line"><b>radius 0: </b><span id="radius0display"></span></div>
+<div class="line"><b>radius 1: </b><span id="radius1display"></span></div>
+<div class="line"><b>time: </b><span id="time"></span></div>
+</div>
+
+</div>
+
+<div class="column">
+  <div class="line">
+    Script:
+    <select id="scriptselect" name="script_select">
+    <option value="difference" selected>Difference</option>
+    <option value="subtract">Subtract</option>
+    <option value="difference_gray">Difference gray</option>
+    <option value="glow_2">Glow 2</option>
+    <option value="flat">flat</option>
+    <option value="focus_invert">focus invert</option>
+    <option value="metal">metal</option>
+    <option value="puffed_glass">puffed glass</option>
+    <option value="glow_3">superglow</option>
+    <option value="edge_effect">interesting edge effect</option>
+    <option value="dream">dream</option>
+    <option value="prettyglow">pretty glow</option>
+    <option value="transparent">transparent</option>
+    <option value="original">original</option>
+    <option value="blur0">blur 0</option>
+    <option value="blur1">blur 1</option>
+    </select>
+
+    <button onclick="update()" >run</button>
+  </div>
+  <textarea id="scripttext" rows="6" cols="40" spellcheck="false" ></textarea>
+
+  <div class="line">
+    Image:
+    <select id="imageselect" name="image_select">
+    <option value="0" selected>red rose</option>
+    <option value="1">night sky</option>
+    <option value="2" >tree</option>
+    <option value="3" >bird</option>
+    </select>
+  </div>
+
+  </div>
+
+
+<div class="column">
+<div class="line">Radius 0: <small>1 </small><input id="radius0" type="range" min="1" max="40" value="20" onchange="setRadius(0, this.value)"><small> 40</small></div>
+<div class="line">Radius 1: <small>1 </small><input id="radius1" type="range" min="1" max="40" value="4" onchange="setRadius(1, this.value)"><small> 40</small></div>
+<hr/>
+<div class="chartpanel">
+<canvas class="chart" id="chartcanvas" width="120" height="120"></canvas>
+</div>
+</div>
+
+
+
+</div>
+</div>
+
+
+</body>
+</html>
+
+

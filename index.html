@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>glif demos</title>
+
+<link rel="stylesheet" type="text/css" href="css/demo.css">
+
+<!--script type="text/javascript" src="../glif.min.js"></script-->
+
+<style>
+p { text-indent: -2em; }
+</style>
+
+<script>
+
+function main() {
+  if (!window.WebGLRenderingContext) { 
+    document.getElementById('main').innerHTML += 
+      '<div class="error">sorry, your device does not support WebGL! Please go to <a href="http://get.webgl.org">http://get.webgl.org</a> for more info.</div>'; 
+    return; 
+  }
+}
+
+window.onload = main;
+
+
+</script>
+
+</head>
+
+<body>
+<div class="main panel">
+<h2>glif demo pages</h2>
+
+<div>
+<p><a href="demo/demo_blend.html" >Blend and Composite Modes Explorer</a>Scriptable blend modes and compositing of two images. Discover your own blend modes!</p>
+<p><a href="demo/demo_dog.html" >Difference of Gaussians Explorer</a>Scriptable operations on two blurred versions of the original image.</p>
+<p><a href="demo/demo_warp.html" >Image Warp Demo</a>A demonstration of warping one image with another.</p>
+<p><a href="demo/demo_combo5.html" >Multiple Image Animated Mixing</a> Blending/mixing multiple images, with animation.</p>
+<p><a href="demo/demo_blur.html" >Blur Explorer</a>Experiments with image blurring algorithms.</p>
+<p><a href="demo/demo_sequence.html" >Sequence Effect Demo</a>A demo of the sequential application of effects to an image using double buffering.</p>
+<p><a href="demo/demo_effect.html" >Image Effect Demo</a>Scriptable effects applied to an image.</p>
+</div>
+
+</div>  
+
+<div class="main panel">
+<h2>glif example pages</h2>
+
+<ul>
+<li><a href="examples/example_generate.html" >generate() example</a></li>
+<li><a href="examples/example_effect.html" >effect() example</a></li>
+<li><a href="examples/example_blur.html" >blur() example</a></li>
+<li><a href="examples/example_multiple.html" >effect() + blur() example</a></li>
+</ul>
+
+
+</div>  
+</body></html>

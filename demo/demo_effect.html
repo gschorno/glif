@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>glif library effect demo</title>
+
+<link rel="stylesheet" type="text/css" href="../css/demo.css">
+
+<!--script type="text/javascript" src="../../src/glif-base.js"></script>
+<script type="text/javascript" src="../../src/glif-glsl.js"></script>
+<script type="text/javascript" src="../../src/glif-classes.js"></script>
+<script type="text/javascript" src="../../src/glif-functions.js"></script-->
+
+<script type="text/javascript" src="../../glif.min.js"></script>
+
+<style>
+.column {
+   width:350px;
+ }
+</style>
+
+<script>
+
+var images = ['../images/redrose.jpg', '../images/sky.jpg', '../images/tree.jpg', '../images/bird.jpg' ];
+
+// a selection of glsl pixel value expressions, one of these gets plugged into the fragment shader code 
+// to generate output pixel values
+var exprs =  {
+  swap_blue_green: 'c.rbga',
+  colored_lights: 'vec4(vec3(\nc.r * 2. * sqrt(x * x + (1. - y) * y), \nc.g * 1.2 * sqrt((1.-x) * x + y * y), \nc.b\n), c.a)',
+  oranges: 'vec4(\nmix(c.rgb, vec3(0.87, 0.35, 0.),\nclamp(\npow(1.8 * sin(x * 29.) * sin(y * 20.), 2.),\n0., 1.15))\n, c.a)',
+  dark_left: 'vec4(x * c.rgb, c.a)',
+  original: 'c.rgba',
+};
+
+window.onload = main;
+var image, _env, canvas;
+
+function main () {
+
+  if (!glif.webGLSupport(alert)) { return; }
+
+  canvas = document.getElementById("outputcanvas");
+  _env = glif.getEnv(canvas);
+  if (!_env) return; // failed
+
+
+  document.getElementById('exprselect').addEventListener('change', function (e) {
+    document.getElementById('effecttext').value = exprs[e.currentTarget.value];
+    render();
+  }, false);
+
+  document.getElementById('imageselect').addEventListener('change', function (e) {
+    loadImage(images[parseInt(e.currentTarget.value)]);
+  }, false);
+
+  loadImage(images[0]);
+}
+
+function loadImage(imagepath) {
+
+  image = new Image();
+  image.onload = function () { 
+
+    canvas.width = image.width;
+    canvas.height = image.height;
+
+    render(); 
+  };
+  image.src = imagepath;
+}
+
+function render() {
+  
+  var effecttext = document.getElementById('effecttext').value;
+
+  try {
+    _env.effect(image, effecttext); 
+  } catch (e) {
+    alert('exception: ' + e);
+  }
+  
+}
+
+</script>
+
+</head>
+<body>
+
+<div class="topbar">
+Image Effect Demo
+<a href="/glif/pages/index.html">glif library</a>
+</div>
+
+<div class="main">
+
+<div class="imgpanel">
+<canvas id="outputcanvas" class="bg-checkered" width="420" height="400"></canvas>
+
+<div class="sidebar">
+
+<div class="line">
+image:  
+<select id="imageselect" name="image_select">
+<option value="0" selected>red rose</option>
+<option value="1" >night sky</option>
+<option value="2" >tree</option>
+<option value="3" >bird</option>
+</select>
+</div>
+
+</div>
+
+</div>
+
+
+<div class="column">
+
+<div class="line">
+effect:
+<select id="exprselect" name="expr_select">
+<option value="swap_blue_green" selected>swap blue / green channels</option>
+<option value="colored_lights">colored lights</option>
+<option value="oranges">oranges</option>
+<option value="dark_left">dark left</option>
+<option value="original">original</option>
+</select>
+<button onclick="render();" >run</button>
+</div>
+
+<textarea id="effecttext" rows="5" cols="32" spellcheck="false" >c.rbga</textarea>
+
+</div>
+
+</body>
+</html>

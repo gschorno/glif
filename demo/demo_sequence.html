@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>WebGL - 2D image processing</title>
+
+<link rel="stylesheet" type="text/css" href="../css/demo.css">
+
+<style type="text/css">
+.titlebar {
+  background-color:rgba(0,0,0,0.6);
+}
+</style>
+
+<script type="text/javascript" src="../../src/glif-base.js"></script>
+<script type="text/javascript" src="../../src/glif-glsl.js"></script>
+<script type="text/javascript" src="../../src/glif-math.js"></script>
+<script type="text/javascript" src="../../src/glif-classes.js"></script>
+<script type="text/javascript" src="../../src/glif-functions.js"></script>
+<script type="text/javascript" src="../../src/glif-area.js"></script>
+
+<!--script type="text/javascript" src="../../glif.min.js"></script-->
+
+<script>
+
+  var kernels3x3 = {
+
+    gaussianBlur: [
+      0.045, 0.122, 0.045,
+      0.122, 0.332, 0.122,
+      0.045, 0.122, 0.045
+    ],
+
+    sharpen: [
+       -1, -2, -1,
+       -2,  25, -2,
+       -1, -2, -1
+    ],
+
+    box: [
+        1,  1, 1,
+        1,  1, 1,
+        1,  1, 1
+    ]
+  };
+
+  var kernels5x5 = {
+
+    box: [
+        1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1
+    ],
+  };
+
+// these need to be normalized because they are used directly as uniform values  
+for (var k in kernels3x3) {
+  kernels3x3[k] = glif.area.normalizeSeriesSum(kernels3x3[k]);
+}
+for (var k in kernels5x5) {
+  kernels5x5[k] = glif.area.normalizeSeriesSum(kernels5x5[k]);
+}
+
+
+window.onload = main;
+
+var image, glenv, canvas;
+
+function main() {
+
+  if (!glif.webGLSupport(alert)) { return; }
+
+  canvas = document.getElementById("canvas");
+  glenv = glif.getEnv(canvas);  // create webgl environment
+  if (!glenv) return; // failed
+
+  image = new Image();
+  image.src = "../images/tree.jpg";
+  image.onload = function () {
+
+    canvas.width = image.width; canvas.height = image.height;
+
+    start();
+  };
+}
+
+var fixed_blur, convolve_program3x3, convolve_program5x5, copy_program, doublebuffer,
+    effectslist = [];
+
+var pause=false, frame = 0, maxframes= 400, program_names = [];
+
+  var // program parameters
+    copy_out, noise,blur,  fixedblur, box3, sharpen, sharpen4, sharpen16, box5;
+
+function start() {
+  var inputTexture = glenv.createTexture(image, {flipY:false});
+
+  // create the Programs to use sequentially in a list
+
+  // fixed weight values written into the shader
+  fixed_blur = glenv.createProgram(glif.area.getConvolveShaderText(kernels3x3.gaussianBlur, 3, 3, {rgb:true}));
+
+  // these programs use variable uniform values which are written to the program before each use in the sequence
+  convolve_program3x3 = glenv.createProgram(glif.area.getConvolveShaderText('kernel', 3, 3, {rgb:true}));
+
+  convolve_program5x5 = glenv.createProgram(glif.area.getConvolveShaderText('kernel', 5, 5, {rgb:true}));
+
+
+  // create a noise program
+  noise_program = glenv.createProgram(glif.glsl.getSampleStackShaderText (1, {
+
+    // uniforms, variables that are passed into the shader
+    uniforms:  [ 'float rseed;', 'float level;'  ],
+    // randomization functions for the shader
+    functions: [
+      'float rand(vec2 pt) { return fract(sin(dot(pt.xy, vec2(12.9898, 78.233))) * 43758.5453); }',
+      'float srand(vec2 pt, float seed) { return fract(sin(dot(pt.xy, vec2(12.9898, seed+78.233))) * 43758.5453); }',
+      'vec3 noise3(vec2 pt, float seed, float lvl) { \n' + 
+      '  return vec3( mix(1. - lvl, 1. + lvl, srand(pos,rseed)), \n' +
+      '    mix(1. - lvl, 1. + lvl, srand(pos, rseed + 20.145)), mix(1. - lvl, 1. + lvl, srand(pos, rseed)) ); \n}'
+    ],
+    // shader expression that adds noise to the current pixel
+    expr: 'vec4(c0.rgb * (mix(1. - level, 1. + level, srand(pos, rseed))), 1)'
+//    expr: 'vec4(c0.rgb * noise3(pos, rseed, level), 1)'
+    }));
+
+  // glenv.createProgram('copy'); // <-
+  copy_program = new glif.programs.CopyProgram(glenv); 
+
+    // specs for program steps
+    copy_out = { name: 'copy out', program: copy_program, output:null, noadvance:true };
+    noise = { name: 'noise', program: noise_program, properties: { rseed: frame, level:0.1 } };
+
+    blur = { name: 'gauss blur 3x3', program: convolve_program3x3, properties: { 'kernel[0]': kernels3x3.gaussianBlur, pixelSize: [ 1 / image.width, 1 / image.height ] } };
+
+    // test fixed blur, no uniform weights
+    fixedblur = { name: 'fixed blur 3x3', program: fixed_blur, properties: { pixelSize: [ 1/image.width, 1/image.height ] } };
+
+    box3 = { name: 'box blur 3x3', program: convolve_program3x3, properties: { 'kernel[0]': kernels3x3.box, pixelSize: [ 1 / image.width, 1 / image.height ] } };
+
+  // changing the pixelsize uniform property on these    
+    sharpen = { name: 'sharpen 3x3', program: convolve_program3x3, properties: { 'kernel[0]': kernels3x3.sharpen, pixelSize: [ 1 / image.width, 1 / image.height ] } };
+    sharpen4 = { name: 'sharpen 3x3', program: convolve_program3x3, properties: { 'kernel[0]': kernels3x3.sharpen, pixelSize: [ 4 / image.width, 4 / image.height ] } };
+
+    box5 = { name: 'box blur 5x5', program: convolve_program5x5, properties: { 'kernel[0]': kernels5x5.box } };
+
+  // animate() will loop through this list of programs
+  effectslist.push(blur);
+  effectslist.push(fixedblur);
+  effectslist.push(box5);
+  effectslist.push(noise);
+  effectslist.push(sharpen4);
+  effectslist.push(noise);
+  effectslist.push(blur);
+  effectslist.push(noise);
+  effectslist.push(sharpen);
+  effectslist.push(box3);
+  effectslist.push(noise);
+  effectslist.push(fixedblur);
+  effectslist.push(noise);
+  effectslist.push(copy_out);
+
+  doublebuffer = new glif.DoubleBuffer(glenv, image);
+
+  animate();
+}
+
+// run a program item in the list
+function runProgram (e) {
+  e.program.run(
+    e.noadvance ? doublebuffer.outputTexture() : doublebuffer.advance(), 
+    (typeof e.output === 'undefined') ? doublebuffer.outputFB() : e.output, 
+    e.properties);
+}
+
+function drawNext () {
+  var e = effectslist[frame % effectslist.length];
+  runProgram(e);
+  program_names.push(e.name);
+  if (program_names.length > 12) { program_names.shift(); }
+  frame++;
+  noise.properties.rseed = frame;
+}
+
+function animate () {
+  if (!pause) {
+    drawNext();
+    document.getElementById('frame').innerHTML = '' + frame;
+    document.getElementById('program_name').innerHTML = '' + program_names.join('</br>');
+  }
+  if (frame >= maxframes) return;
+
+  requestAnimFrame(animate);
+}
+
+</script>
+
+</head>
+<body>
+
+<div class="topbar">
+Sequence Effect Demo
+<a href="../index.html">glif library</a>
+</div>
+
+
+<div class="main">  
+
+<div class="imgpanel">
+<canvas id="canvas" width="400" height="300"></canvas>
+
+<div class="titlebar">
+<div class="line"><b>frames: </b><span id="frame"></span></div>
+<div class="line"><b>programs: </b></br><span id="program_name"></span></div>
+</div>
+
+</div>
+</div>
+
+</body>
+</html>
+
+
