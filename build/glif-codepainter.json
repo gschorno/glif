@@ -1,0 +1,11 @@
+{
+  "indent_style": "space",
+  "indent_size": 2,
+  "trim_trailing_whitespace": true,
+  "spaces_around_operators": true,
+  "space_after_control_statements": true,
+  "space_after_anonymous_functions": true,
+  "spaces_in_parens": true,
+  "spaces_in_brackets": false,
+  "insert_final_newline": true
+}

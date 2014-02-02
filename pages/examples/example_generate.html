@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>glif library generate example</title>
+
+<link rel="stylesheet" type="text/css" href="../css/demo.css">
+
+<script type="text/javascript" src="../../glif.min.js"></script>
+
+<script>
+
+window.onload = apply;
+
+var generator_text = " vec4 ( x, y, (1.-x)*(1.-y), 1. ) ";
+
+function apply() {
+
+  if (!glif.webGLSupport(alert)) { return; }
+
+  // glif environment to draw generated output
+  var _envOutput = glif.getEnv("output_canvas");
+  if (!_envOutput) return; // failed
+
+  try {
+    // using source image as input, apply effect to the outputcanvas
+    _envOutput.generate(generator_text); 
+  } catch (e) {
+    alert('exception: ' + e);
+  }
+  
+}
+
+</script>
+
+</head>
+<body>
+
+<div class="topbar">
+Image Generator Example
+<a href="../index.html">glif library</a>
+</div>
+
+<div class="main">
+
+<div class="imgpanel">
+<canvas id="output_canvas" height="400" width="500"></canvas>
+<div class="imginfo">generate() - a nice gradient</div>
+</div>
+
+</body>
+</html>

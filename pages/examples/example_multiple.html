@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>glif library multiple contexts example</title>
+
+<link rel="stylesheet" type="text/css" href="../css/demo.css">
+
+<style>
+.sidebar {
+  max-width:140px;
+}
+</style>
+
+<script type="text/javascript" src="../../glif.min.js"></script>
+
+<script>
+
+window.onload = apply;
+
+var effect_text = " vec4 ( pow ( c.rgb, vec3(1.5) ), c.a ) ";
+var blur_options = { type: 'gaussian', radius: 5 };
+
+function apply() {
+
+  if (!glif.webGLSupport(alert)) { return; }
+
+  // -- set up image effect
+
+  // canvas to draw effect output to
+  var effect_canvas = document.getElementById("effect_canvas");
+
+  // associated glif environment to draw effect output
+  var _envEffect = glif.getEnv(effect_canvas);
+  if (!_envEffect) return; // failed.
+
+  // -- set up blur
+
+  // glif environment to draw blur output to
+  var _envBlur = glif.getEnv("blur_canvas");
+  if (!_envBlur) return; // failed
+
+  var source_image = document.getElementById("source_image");
+
+  // glif environment to draw effect+blur output to
+  var _envBoth = glif.getEnv("both_canvas");
+  if (!_envBoth) return; // failed
+
+  try {
+
+    // use input source image, draw effect to effect_canvas
+    _envEffect.effect(source_image, effect_text); 
+
+    // use input source image, draw to blur canvas
+    _envBlur.blur(source_image, blur_options);
+
+    // all in all it is problematic to have two interacting gl contexts
+
+    // apply blur to input effect_canvas, draw to effect+blur canvas
+
+    //  _envBoth.blur(_envEffect, blur_options); 
+    // 
+  
+    // apply contrast to blur canvas, passing in source glenv '_envBlur' here instead of 
+    // the assoc. canvas so that a copy of the canvas is used as the input, this solves some
+    // problems (different in each browser) with using a gl canvas to create a texture in
+    // another gl context.
+
+    // output goes to _envBoth's canvas
+    _envBoth.effect(_envBlur, effect_text);
+
+
+  } catch (e) {
+    alert('exception: ' + e);
+  }
+  
+}
+
+</script>
+
+</head>
+<body>
+
+<div class="topbar">
+Multiple WebGL Contexts Example
+<a href="../index.html">glif library</a>
+</div>
+
+<div class="main">
+
+<div class="imgpanel">
+<img src="../images/tree.jpg" id="source_image" alt="input image" height="504" width="423">
+<div class="imginfo">source image</div>
+</div>
+<div class="imgpanel">
+<canvas id="effect_canvas" height="504" width="423"></canvas>
+<div class="imginfo">contrast enhance</div>
+</div>
+<div class="imgpanel">
+<canvas id="blur_canvas" height="504" width="423"></canvas>
+<div class="imginfo">blur</div>
+</div>
+<div class="imgpanel">
+<canvas id="both_canvas" height="504" width="423"></canvas>
+<div class="imginfo">blur + contrast</div>
+</div>
+
+</body>
+</html>

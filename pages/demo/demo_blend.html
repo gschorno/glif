@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>glif demos - blend</title>
+
+<link rel="stylesheet" type="text/css" href="../css/demo.css">
+
+<!--script type="text/javascript" src="../../src/glif-base.js"></script>
+<script type="text/javascript" src="../../src/glif-glsl.js"></script>
+<script type="text/javascript" src="../../src/glif-classes.js"></script>
+<script type="text/javascript" src="../../src/glif-functions.js"></script-->
+
+<script type="text/javascript" src="../../glif.min.js"></script>
+
+<style>
+.column {
+  width:462px;
+  height:291px;
+}
+.line {
+  max-width: 450px;
+}
+</style>
+
+
+</head>
+<body>
+
+<div class="topbar">
+Blend and Composite Modes Explorer
+<a href="/glif/pages/index.html">glif library</a>
+</div>
+
+
+<div class="main">
+
+
+<div class="imgpanel">
+<canvas id="canvas1" class="bg-checkered" width="480" height="320"></canvas>
+<div class="imginfo">destination (Cb) </div>
+</div>
+
+<div class="imgpanel">
+<canvas id="canvas2" class="bg-checkered" width="480" height="320"></canvas>
+<div class="imginfo">source (Cs) </div>
+</div>
+
+<div class="imgpanel">
+<canvas id="canvasOut" class="bg-checkered" width="480" height="320"></canvas>
+<div class="imginfo">output</div>
+</div>
+
+<div class="column">
+
+  <div class="line">
+    Blend Mode:
+    <select id="blendselect" name="blend_select">
+    <option value="normal" selected>normal</option>
+    <option value="lighten">lighten</option>
+    <option value="darken">darken</option>
+    <option value="multiply">multiply</option>
+    <option value="screen">screen</option>
+    <option value="overlay">overlay</option>
+    <option value="hard-light">hard-light</option>
+    <option value="color-dodge">color-dodge</option>
+    <option value="color-burn">color-burn</option>
+    <option value="soft-light">soft-light</option>
+    <option value="subtract">subtract</option>
+    <option value="difference">difference</option>
+    <option value="exclusion">exclusion</option>
+    <option value="pin-light">pin-light</option>
+    </select>
+
+    Composite:
+    <select id="compselect" name="comp_select">
+    <option value="source-over" selected>source-over</option>
+    <option value="destination-over">destination-over</option>
+    <!--option value="source-in">source-in</option>
+    <option value="destination-in">destination-in</option>
+    <option value="source-out">source-out</option>
+    <option value="destination-out">destination-out</option-->
+    <option value="destination">destination</option>
+    <option value="copy">copy</option>
+    </select>
+
+    <button onclick="render()">blend</button>
+
+  </div>
+
+  <textarea type="text" cols="80" rows="12" id="blendtext" spellcheck="false"></textarea>
+
+</div>
+
+
+</div>
+
+<script>
+
+
+window.onload = main;
+
+var canvas1, canvas2, _env,
+  blendmode = 'normal',
+  compositemode = 'source-over';
+
+function setBlendComposite(blend, comp) {
+  compositemode = comp || compositemode;
+  blendmode = blend || blendmode;
+  document.getElementById('blendtext').value = glif.functions.blendexpr(blendmode, compositemode);
+  render();
+}
+
+function main() {
+
+  if (!glif.webGLSupport(alert)) { alert('no webgl support'); return; }
+
+  var outputcanvas = document.getElementById("canvasOut");
+  _env = glif.getEnv(outputcanvas, {premultipliedAlpha: true});
+  if (!_env) return; // failed
+
+  // set text edit to the result expression of the currently selected blend and composite modes
+  document.getElementById('blendtext').value = glif.functions.blendexpr(blendmode, compositemode);
+
+  document.getElementById('blendselect').addEventListener('change', function (e) {
+    setBlendComposite(e.currentTarget.value, compositemode);
+  }, false);
+
+  document.getElementById('compselect').addEventListener('change', function (e) {
+    setBlendComposite(blendmode, e.currentTarget.value);
+  }, false);
+
+  canvas1 = document.getElementById("canvas1");
+  canvas2 = document.getElementById("canvas2");
+
+  image = new Image();
+  image.onload = function () { 
+    canvas1.getContext("2d").drawImage(this, 0, 0); 
+    render();
+  };
+  
+  image.src = "../images/alpha.png";
+
+  drawSourceCanvas(canvas2);
+}
+
+function drawSourceCanvas(canvas) {
+
+  var ctx = canvas.getContext("2d");
+
+  // draw some items on this canvas 
+  ctx.beginPath();
+  ctx.fillStyle = "rgba(60, 40, 52, 0.7)";
+  ctx.arc(82, 56, 25, 0, Math.PI * 2, false);
+  ctx.fill();  
+
+
+  ctx.fillStyle = "rgba(120, 160, 210, 0.7)";
+  ctx.fillRect(210, 215, 240, 50);
+
+  var gradient = ctx.createRadialGradient(126, 85, 10, 150, 150, 145);
+
+  gradient.addColorStop(0, 'rgba(210, 70, 30, 1)'); 
+  gradient.addColorStop(1, 'rgba(240, 160, 250, 0.3)'); 
+
+  ctx.beginPath();
+  ctx.fillStyle = gradient;
+  ctx.arc(156, 120, 58, 0, Math.PI * 2, false);
+  ctx.fill();  
+
+  gradient = ctx.createLinearGradient(245, 45, 230, 145);
+
+  gradient.addColorStop(0, 'rgba(20, 10, 30, 0.9)'); 
+  gradient.addColorStop(0.8, 'rgba(190, 150, 40, 0.0)'); 
+  gradient.addColorStop(1, 'rgba(120, 210, 50, 0.85)'); 
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(245, 45, 190, 145);
+  
+
+  gradient = ctx.createLinearGradient(50, 205, 200, 73);
+
+  gradient.addColorStop(0, 'rgba(230, 190, 60, 0.8)'); 
+  gradient.addColorStop(0.4, 'rgba(1, 10, 40, 0.48)'); 
+  gradient.addColorStop(0.9, 'rgba(220, 170, 180, 0.9)'); 
+
+  ctx.fillStyle = gradient;
+
+  ctx.fillRect(50, 205, 200, 73);
+}
+function render() {
+  try {
+    _env.blendComposite(canvas1, canvas2, document.getElementById('blendtext').value);
+//      {blendmode:blendmode, compositemode:compositemode});
+  } catch (e) {
+    alert('exception: ' + e);
+  }
+}
+
+
+</script>
+
+</body>
+</html>

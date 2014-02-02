@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>glif image warp demo</title>
+
+<link rel="stylesheet" type="text/css" href="../css/demo.css">
+
+<script type="text/javascript" src="../../src/glif-base.js"></script>
+<script type="text/javascript" src="../../src/glif-glsl.js"></script>
+<script type="text/javascript" src="../../src/glif-math.js"></script>
+<script type="text/javascript" src="../../src/glif-classes.js"></script>
+<script type="text/javascript" src="../../src/glif-functions.js"></script>
+<script type="text/javascript" src="../../src/glif-area.js"></script>
+
+<!--script type="text/javascript" src="../../glif.min.js"></script-->
+
+<style>
+.column { width: 340px; }
+</style>
+
+</head>
+<body>
+
+<div class="topbar">
+  Image Warp Demo
+  <a href="../index.html">glif library</a>
+</div>
+
+
+<div class="main">
+
+
+<div class="imgpanel">
+  <div class="imginfo">source image</div>
+  <!--canvas id="canvasSrc" width="480" height="300"></canvas-->
+  <img src="../images/bird.jpg" id="imageSrc" width="480" height="300">
+</div>
+
+<div class="imgpanel">
+  <div class="imginfo">warp image</div>
+  <canvas id="canvasWarp" width="480" height="300"></canvas>
+</div>
+
+<div class="imgpanel">
+  <div class="imginfo">output</div>
+  <canvas id="canvasOut" width="480" height="300"></canvas>
+</div>
+
+
+<div class="column">
+
+  <div class="line">
+  Distance: -120<input id="scale" type="range" min="-120" max="120" value="85" onchange="setProperty('scale', this.value);">120
+  </div>
+
+  <div class="line">
+  Shape: 0.05<input id="shape" type="range" min="5" max="250" value="100" onchange="setProperty('shape', this.value*0.01);">2.5
+  </div>
+
+
+  <div class="line">
+  Angle: -180<input id="angle" type="range" min="-180" max="180" value="90" onchange="setProperty('angle', this.value)">180 
+  </div>
+
+  <!--div class="line">
+  Shear X: -1<input id="shearX" type="range" min="-100" max="100" value="0" onchange="setProperty('shearX', this.value*0.01)">1
+  </div>
+
+  <div class="line">
+  Shear Y: -1<input id="shearY" type="range" min="-100" max="100" value="0" onchange="setProperty('shearY', this.value*0.01)">1
+  </div-->
+</div>
+
+
+<div class="column">
+  <div class="line">
+    Script:
+    <select id="scriptselect" name="script_select">
+    <option value="bigcurve" selected>big curve</option>
+    <option value="midred">mid red</option>
+    <option value="rings">rings</option>
+    <option value="rings2">rings 2</option>
+    <option value="redrose">redrose</option>
+    <option value="bird">bird</option>
+    </select>
+
+    <button onclick="generateWarpImage()" >apply</button>
+    <button onclick="blurWarpImage();" title="apply a blur to the warp source image" >blur</button>
+  </div>
+  <textarea id="scripttext" rows="8" cols="50" spellcheck="false" ></textarea>
+</div>
+
+</div>
+
+<script>
+
+window.onload = main;
+
+var _outputenv, _warpenv,
+  canvasWarp, canvasWarpCopy, 
+//  canvasSrc, 
+  imageSrc,
+  imageloaded = // false, // image to be warped is loaded
+    true; // using static image currently
+
+  params = { 
+    scale: 85, 
+    angle: 90, 
+    shape: 1,  
+    shearX: 0, 
+    shearY: 0 
+  };
+
+
+function main() {
+
+  if (!glif.webGLSupport(alert)) { return; }
+
+  sourceImage = 
+//  canvasSrc = document.getElementById('canvasSrc');
+    document.getElementById('imageSrc');
+
+  canvasWarp = document.getElementById('canvasWarp');
+
+  // currently using glenv.getCanvas() to copy canvasWarp onto a non-webgl canvas canvasWarpCopy after it's
+  // generated, otherwise y-flipping (on chrome) and syncing (data not available? ff, ie) problems result when a webgl
+  // canvas is used with a texture in another gl context directly.
+
+  // the solution may be to rewrite this to use only one gl context to do all the processing.
+
+  var outputcanvas = document.getElementById("canvasOut");
+
+  _outputenv = glif.getEnv(outputcanvas);
+  if (!_outputenv) return;
+
+  _warpenv = glif.getEnv(canvasWarp);
+  if (!_warpenv) return;
+
+  document.getElementById('scripttext').value = patterns.bigcurve;
+
+  document.getElementById('scriptselect').addEventListener('change', function (e) {
+    setWarpExprText(patterns[e.currentTarget.value]);
+  }, false);
+
+  generateWarpImage();
+
+/*
+  // source image to be warped
+  var imageSrc = new Image();
+  imageSrc.onload = function () {
+    canvasSrc.getContext('2d').drawImage(imageSrc, 0, 0);
+    imageloaded = true;
+    render();
+  };
+  imageSrc.src = "../images/bird.jpg";
+*/
+  render();
+}
+
+function setWarpExprText(value) {
+  if (typeof value === 'string') {  // a script expression
+    document.getElementById('scripttext').value = value;
+    generateWarpImage();
+    render();
+  }
+  else {
+    loadWarpImage(value.url);
+  }
+}
+
+function render() {
+  try {
+    // if we use the gl'ed canvas directly the input gets flipped in chrome (32 Win7 acer laptop 'Intel HD graphics').
+   //_outputenv.warpImage(sourceImage, canvasWarp, params);
+   // so we use a copy
+   _outputenv.warpImage(sourceImage, canvasWarpCopy, params);
+  } catch (e) {
+    alert('exception: ' + e);
+  }
+}
+
+function setProperty(name, val) {
+  params[name] = (typeof val === 'string') ? parseFloat(val) : val;
+  if (imageloaded)
+    render();
+}
+
+patterns = {
+  bigcurve : 'vec4(\nmix(vec3(\n0.25+distance(pos, vec2(0.54, 0.62)),\n0.25+distance(pos, vec2(0.27, 0.39)),\n0), vec3(0.5, 0.5, 0.5), max(x * x, (1. - y + 0.1) * (1. - y + 0.1)))\n, 1)',
+  midred : 'vec4(\nmix(\nvec3(x*(1.-x)*3., 0.25+distance(pos, vec2(0.5, 0.5)), 0.),\nvec3(0.5, 0.5, 0.5),\nclamp(2.*(x - 0.5) * (x - 0.5)+10.*(y - 0.5) * (y - 0.5),0.,1.)\n)\n, 1)',
+  rings: 'vec4(\nvec3(\n0.25+0.25*(1.+sin(8.*distance(pos, vec2(0.25, 0.67)))),\n0.25+0.25*(1.+sin(5.*distance(pos, vec2(0.5, 0.5)))), 0.5)\n, 1)',
+  rings2: 'vec4(vec3(0.375+0.125*(1.+sin(x*10.-y*y*4.)), 0.25+distance(pos, vec2(0.5, 0.5)), 0.5), 1)',
+  redrose: { url: '../images/redrose.jpg' },
+  bird: { url: '../images/bird.jpg' }
+};
+
+
+function generateWarpImage() {
+  try {
+    _warpenv.generate(document.getElementById('scripttext').value);
+    canvasWarpCopy = _warpenv.getCanvas();
+  } catch (e) {
+    alert('exception: ' + e);
+    return;
+  }
+  if (imageloaded)
+    render();
+}
+
+function blurWarpImage() {
+  try {
+//    _warpenv.copyCanvas(canvasWarpCopy); // why does this kill it, it's from the same gl context
+    _warpenv.blur(canvasWarpCopy, { type: 'gaussian', radius: 12 });
+    _warpenv.copyCanvas(canvasWarpCopy);
+
+//    _warpenv.blur({ type: 'gaussian', radius: 12 });
+
+  } catch (e) {
+    alert('exception: ' + e);
+    return;
+  }
+  if (imageloaded)
+    render();
+}
+
+
+var copyprog;
+
+function loadWarpImage(url) {
+  // load image from file
+  var imageWarp = new Image();
+  imageWarp.onload = function () {
+    // cant draw, so use CopyProgram
+    if (!copyprog) copyprog = new glif.programs.CopyProgram(_warpenv);
+    var tex = _warpenv.createTexture(imageWarp);
+    copyprog.run(tex);
+    tex.destroy();
+
+    canvasWarpCopy = _warpenv.getCanvas();
+
+    render();
+  };
+
+  imageWarp.src = url;
+} 
+
+</script>
+
+</body>
+</html>

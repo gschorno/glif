@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Blur Explorer - Two pass decomposable blur functions</title>
+
+<link rel="stylesheet" type="text/css" href="../css/demo.css">
+
+<style>
+.column {
+  width:300px;
+}
+</style>
+
+<!--script type="text/javascript" src="../../src/glif-base.js"></script>
+<script type="text/javascript" src="../../src/glif-glsl.js"></script>
+<script type="text/javascript" src="../../src/glif-math.js"></script>
+<script type="text/javascript" src="../../src/glif-classes.js"></script>
+<script type="text/javascript" src="../../src/glif-functions.js"></script>
+<script type="text/javascript" src="../../src/glif-area.js"></script-->
+
+<script type="text/javascript" src="../../glif.min.js"></script>
+
+<script>
+
+
+window.onload = main;
+
+var image, 
+  loaded, _env, 
+  result, lasttimer,
+
+  blurparams = {
+    name: 'gaussian', 
+    radius: 20, 
+    sigma: 0.85, 
+    q: 1.5, 
+    maxradius: 16,
+    interleave: false
+  };
+
+var images = ['../images/redrose.jpg', '../images/sky.jpg', '../images/tree.jpg', '../images/bird.jpg'];
+
+
+function main() {
+
+  if (!glif.webGLSupport(alert)) { return; }
+
+
+  var canvas = document.getElementById("canvas");
+
+  _env = glif.getEnv(canvas);
+  if (!_env) return; // failed
+
+
+  image = new Image();
+  loadImage(images[0]);
+
+  document.getElementById('imageselect').addEventListener('change', function (e) {
+    loadImage(images[parseInt(e.currentTarget.value)]);
+  }, false);
+
+  document.getElementById('interleave').onclick = function (e) { 
+    blurparams.interleave = !!e.currentTarget.checked; 
+    update();
+  };
+
+
+}
+
+function loadImage(url) {
+
+  image.onload = function () {
+    loaded = true;
+
+    var canvas = document.getElementById("canvas");
+    canvas.width = image.width; 
+    canvas.height = image.height;
+
+    update();
+  };
+
+  image.src = url;
+}
+
+function render() {
+  try {
+    result = _env.blur(image, blurparams, null);
+  } catch (e) {
+    result = null;
+    alert('exception: ' + e);
+  }
+}
+
+function update() {
+
+  var start = new Date();
+  if (loaded) render();
+  lasttimer = (new Date()) - start;
+
+  document.getElementById('time').innerHTML = lasttimer + ' ms';
+
+  updateStatus();
+
+}
+
+// draw graph of weights
+function drawWeights(values) {
+  var canvas = document.getElementById('chartcanvas'),
+    ctx = canvas.getContext('2d');
+
+     ctx.clearRect(0,0,canvas.width, canvas.height);
+
+     ctx.beginPath();
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = '#222';
+  ctx.moveTo(0, canvas.height - 1 - 0.95 * canvas.height);
+  for (var i = 1; i < values.length; i++)
+    ctx.lineTo(
+      canvas.width * i / (values.length-1), 
+      canvas.height-1 - 0.95 * canvas.height * values[i] / values[0]);
+  ctx.stroke();
+}
+
+function updateStatus() {
+
+  document.getElementById('type_display').innerHTML = blurparams.name;
+  document.getElementById('radius_display').innerHTML = '' + blurparams.radius;
+  document.getElementById('sigma_display').innerHTML = '' + blurparams.sigma;
+  document.getElementById('q_display').innerHTML = '' + blurparams.q;
+
+
+  if (result) {
+    var lines = result[0].map(function (x) { return x.toFixed(3) });
+
+    document.getElementById('values').innerHTML = 
+        "Actual radius: " + result[2].toFixed(2) + "<br/>" +
+        result[1] + (result[1] > 1 ? " Passes, " : " Pass, ") + 
+        lasttimer + " ms<br/>" + 
+        "Kernel values:<br/><code><small>" + lines.join("  ") + "</small></code>"; 
+
+    drawWeights(result[0]);
+  }
+  else
+    document.getElementById('values').innerHTML = 'operation failure';
+}
+
+function setFilter(name) {
+  blurparams.name = name;
+  update();
+}
+
+function setValue(name, value) {
+  blurparams[name] = parseFloat(value);
+  update();
+}
+
+</script>
+
+</head>
+<body>
+
+<div class="topbar">
+Blur Explorer
+<a href="../index.html">glif library</a>
+</div>
+
+<div class="main">
+
+
+<div class="imgpanel">
+
+  <canvas id="canvas"></canvas>
+
+  <div class="titlebar">
+  <div class="line"><b>blur type: </b><span id="type_display"></span></div>
+  <div class="line"><b>radius: </b><span id="radius_display"></span></div>
+  <div class="line"><b>sigma: </b><span id="sigma_display"></span></div>
+  <div class="line"><b>q: </b><span id="q_display"></span></div>
+  <div class="line"><b>time: </b><span id="time"></span></div>
+  </div>
+
+</div>
+
+<div class="column">
+
+  <div class="line">
+    Q-gaussian<input type="radio" name="filter" onchange="setFilter('q_gaussian');" />
+    Gaussian<input type="radio" name="filter" onchange="setFilter('gaussian');" checked/>
+    Triangle<input type="radio" name="filter" onchange="setFilter('triangle');" />
+    Box<input type="radio" name="filter" onchange="setFilter('box');" />
+  </div>
+
+  <div class="line">
+    Radius: <small>1 </small><input id="radius" type="range" min="1" max="80" value="20" onchange="setValue('radius', this.value)"><small>80</small>
+  </div>
+
+  <div class="line">
+    <span title="only used with gaussian blurs">Sigma: </span><small>.25 </small><input id="sigma" type="range" min="25" max="200" value="85" onchange="setValue('sigma', this.value/100)"><small>2.0</small>
+  </div>
+
+  <div class="line">
+    <span title="only used with q-gaussian blur">Q: </span>
+    <small>0.5 </small>
+    <input id="q_value" type="range" min="50" max="200" value="100" onchange="setValue('q', this.value/100)">
+    <small>3.0</small>
+  </div>
+
+  <div class="line">
+    max. radius: 
+    <small>4</small>
+    <input id="maxradius" type="range" min="4" max="80" value="16" onchange="setValue('maxradius', this.value);">
+    <small>80</small>
+  </div>
+
+  <div class="line">
+    <input id="interleave" type="checkbox" value="animate" >
+    <span title="interleaves horizontal and vertical blurs">interleave</span>
+    </input>
+  </div>
+
+  <div class="line">
+    Image:
+    <select id="imageselect" name="image_select">
+    <option value="0" selected>red rose</option>
+    <option value="1">night sky</option>
+    <option value="2" >tree</option>
+    <option value="3" >bird</option>
+    </select>
+  </div>
+
+</div>
+
+<div class="column">
+
+  <div class="chartpanel">
+  <canvas class="chart" id="chartcanvas" width="270" height="150"></canvas>
+  </div>
+
+  <div id="values"></div>
+
+</div>
+
+</div>
+
+</body>
+</html>
+
+
