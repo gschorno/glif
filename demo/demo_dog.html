@@ -6,19 +6,89 @@
 
 <link rel="stylesheet" type="text/css" href="../css/demo.css">
 
+<script type="text/javascript" src="../glif.min.js"></script>
+
 <style>
 .column {
   width:320px;
 }
 </style>
 
-<!--script type="text/javascript" src="../../src/glif-base.js"></script>
-<script type="text/javascript" src="../../src/glif-glsl.js"></script>
-<script type="text/javascript" src="../../src/glif-classes.js"></script>
-<script type="text/javascript" src="../../src/glif-functions.js"></script>
-<script type="text/javascript" src="../../src/glif-area.js"></script-->
+</head>
+<body>
 
-<script type="text/javascript" src="../../glif.min.js"></script>
+<div class="topbar">
+Difference of Gaussians Explorer
+<a href="https://github.com/gschorno/glif">github</a>
+<a href="../index.html">glif pages</a>
+</div>
+
+<div class="main">
+
+<div class="imgpanel">
+<canvas id="canvas"></canvas>
+
+<div class="titlebar">
+<div class="line"><b>radius 0: </b><span id="radius0display"></span></div>
+<div class="line"><b>radius 1: </b><span id="radius1display"></span></div>
+<div class="line"><b>time: </b><span id="time"></span></div>
+</div>
+
+</div>
+
+<div class="column">
+  <div class="line">
+    Script:
+    <select id="scriptselect" name="script_select">
+    <option value="difference" selected>Difference</option>
+    <option value="subtract">Subtract</option>
+    <option value="difference_gray">Difference gray</option>
+    <option value="glow_2">Glow 2</option>
+    <option value="flat">flat</option>
+    <option value="focus_invert">focus invert</option>
+    <option value="metal">metal</option>
+    <option value="puffed_glass">puffed glass</option>
+    <option value="glow_3">superglow</option>
+    <option value="edge_effect">interesting edge effect</option>
+    <option value="dream">dream</option>
+    <option value="prettyglow">pretty glow</option>
+    <option value="transparent">transparent</option>
+    <option value="original">original</option>
+    <option value="blur0">blur 0</option>
+    <option value="blur1">blur 1</option>
+    </select>
+
+    <button onclick="update()" >run</button>
+  </div>
+  <textarea id="scripttext" rows="6" cols="40" spellcheck="false" ></textarea>
+
+  <div class="line">
+    Image:
+    <select id="imageselect" name="image_select">
+    <option value="0" selected>red rose</option>
+    <option value="1">night sky</option>
+    <option value="2" >tree</option>
+    <option value="3" >bird</option>
+    </select>
+  </div>
+
+  </div>
+
+
+<div class="column">
+<div class="line">Radius 0: <small>1 </small><input id="radius0" type="range" min="1" max="40" value="20" onchange="setRadius(0, this.value)"><small> 40</small></div>
+<div class="line">Radius 1: <small>1 </small><input id="radius1" type="range" min="1" max="40" value="4" onchange="setRadius(1, this.value)"><small> 40</small></div>
+<hr/>
+<div class="chartpanel">
+<canvas class="chart" id="chartcanvas" width="120" height="120"></canvas>
+</div>
+</div>
+
+
+
+</div>
+</div>
+
 
 <script>
 
@@ -179,81 +249,6 @@ var scripts =  {
 };
 
 </script>
-
-</head>
-<body>
-
-<div class="topbar">
-Difference of Gaussians Explorer
-<a href="/glif/pages/index.html">glif library</a>
-</div>
-
-<div class="main">
-
-<div class="imgpanel">
-<canvas id="canvas"></canvas>
-
-<div class="titlebar">
-<div class="line"><b>radius 0: </b><span id="radius0display"></span></div>
-<div class="line"><b>radius 1: </b><span id="radius1display"></span></div>
-<div class="line"><b>time: </b><span id="time"></span></div>
-</div>
-
-</div>
-
-<div class="column">
-  <div class="line">
-    Script:
-    <select id="scriptselect" name="script_select">
-    <option value="difference" selected>Difference</option>
-    <option value="subtract">Subtract</option>
-    <option value="difference_gray">Difference gray</option>
-    <option value="glow_2">Glow 2</option>
-    <option value="flat">flat</option>
-    <option value="focus_invert">focus invert</option>
-    <option value="metal">metal</option>
-    <option value="puffed_glass">puffed glass</option>
-    <option value="glow_3">superglow</option>
-    <option value="edge_effect">interesting edge effect</option>
-    <option value="dream">dream</option>
-    <option value="prettyglow">pretty glow</option>
-    <option value="transparent">transparent</option>
-    <option value="original">original</option>
-    <option value="blur0">blur 0</option>
-    <option value="blur1">blur 1</option>
-    </select>
-
-    <button onclick="update()" >run</button>
-  </div>
-  <textarea id="scripttext" rows="6" cols="40" spellcheck="false" ></textarea>
-
-  <div class="line">
-    Image:
-    <select id="imageselect" name="image_select">
-    <option value="0" selected>red rose</option>
-    <option value="1">night sky</option>
-    <option value="2" >tree</option>
-    <option value="3" >bird</option>
-    </select>
-  </div>
-
-  </div>
-
-
-<div class="column">
-<div class="line">Radius 0: <small>1 </small><input id="radius0" type="range" min="1" max="40" value="20" onchange="setRadius(0, this.value)"><small> 40</small></div>
-<div class="line">Radius 1: <small>1 </small><input id="radius1" type="range" min="1" max="40" value="4" onchange="setRadius(1, this.value)"><small> 40</small></div>
-<hr/>
-<div class="chartpanel">
-<canvas class="chart" id="chartcanvas" width="120" height="120"></canvas>
-</div>
-</div>
-
-
-
-</div>
-</div>
-
 
 </body>
 </html>

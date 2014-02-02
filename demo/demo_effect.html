@@ -6,18 +6,62 @@
 
 <link rel="stylesheet" type="text/css" href="../css/demo.css">
 
-<!--script type="text/javascript" src="../../src/glif-base.js"></script>
-<script type="text/javascript" src="../../src/glif-glsl.js"></script>
-<script type="text/javascript" src="../../src/glif-classes.js"></script>
-<script type="text/javascript" src="../../src/glif-functions.js"></script-->
-
-<script type="text/javascript" src="../../glif.min.js"></script>
+<script type="text/javascript" src="../glif.min.js"></script>
 
 <style>
 .column {
    width:350px;
  }
 </style>
+
+</head>
+<body>
+
+<div class="topbar">
+Image Effect Demo
+<a href="https://github.com/gschorno/glif">github</a>
+<a href="../index.html">glif pages</a>
+</div>
+
+<div class="main">
+
+<div class="imgpanel">
+<canvas id="outputcanvas" class="bg-checkered" width="420" height="400"></canvas>
+
+<div class="sidebar">
+
+<div class="line">
+image:  
+<select id="imageselect" name="image_select">
+<option value="0" selected>red rose</option>
+<option value="1" >night sky</option>
+<option value="2" >tree</option>
+<option value="3" >bird</option>
+</select>
+</div>
+
+</div>
+
+</div>
+
+
+<div class="column">
+
+<div class="line">
+effect:
+<select id="exprselect" name="expr_select">
+<option value="swap_blue_green" selected>swap blue / green channels</option>
+<option value="colored_lights">colored lights</option>
+<option value="oranges">oranges</option>
+<option value="dark_left">dark left</option>
+<option value="original">original</option>
+</select>
+<button onclick="render();" >run</button>
+</div>
+
+<textarea id="effecttext" rows="5" cols="32" spellcheck="false" >c.rbga</textarea>
+
+</div>
 
 <script>
 
@@ -84,53 +128,6 @@ function render() {
 
 </script>
 
-</head>
-<body>
-
-<div class="topbar">
-Image Effect Demo
-<a href="/glif/pages/index.html">glif library</a>
-</div>
-
-<div class="main">
-
-<div class="imgpanel">
-<canvas id="outputcanvas" class="bg-checkered" width="420" height="400"></canvas>
-
-<div class="sidebar">
-
-<div class="line">
-image:  
-<select id="imageselect" name="image_select">
-<option value="0" selected>red rose</option>
-<option value="1" >night sky</option>
-<option value="2" >tree</option>
-<option value="3" >bird</option>
-</select>
-</div>
-
-</div>
-
-</div>
-
-
-<div class="column">
-
-<div class="line">
-effect:
-<select id="exprselect" name="expr_select">
-<option value="swap_blue_green" selected>swap blue / green channels</option>
-<option value="colored_lights">colored lights</option>
-<option value="oranges">oranges</option>
-<option value="dark_left">dark left</option>
-<option value="original">original</option>
-</select>
-<button onclick="render();" >run</button>
-</div>
-
-<textarea id="effecttext" rows="5" cols="32" spellcheck="false" >c.rbga</textarea>
-
-</div>
 
 </body>
 </html>

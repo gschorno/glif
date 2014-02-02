@@ -12,14 +12,30 @@
 }
 </style>
 
-<script type="text/javascript" src="../../src/glif-base.js"></script>
-<script type="text/javascript" src="../../src/glif-glsl.js"></script>
-<script type="text/javascript" src="../../src/glif-math.js"></script>
-<script type="text/javascript" src="../../src/glif-classes.js"></script>
-<script type="text/javascript" src="../../src/glif-functions.js"></script>
-<script type="text/javascript" src="../../src/glif-area.js"></script>
+<script type="text/javascript" src="../glif.min.js"></script>
 
-<!--script type="text/javascript" src="../../glif.min.js"></script-->
+</head>
+<body>
+
+<div class="topbar">
+Sequence Effect Demo
+<a href="https://github.com/gschorno/glif">github</a>
+<a href="../index.html">glif pages</a>
+</div>
+
+
+<div class="main">  
+
+<div class="imgpanel">
+<canvas id="canvas" width="400" height="300"></canvas>
+
+<div class="titlebar">
+<div class="line"><b>frames: </b><span id="frame"></span></div>
+<div class="line"><b>programs: </b></br><span id="program_name"></span></div>
+</div>
+
+</div>
+</div>
 
 <script>
 
@@ -197,27 +213,6 @@ function animate () {
 
 </script>
 
-</head>
-<body>
-
-<div class="topbar">
-Sequence Effect Demo
-<a href="../index.html">glif library</a>
-</div>
-
-
-<div class="main">  
-
-<div class="imgpanel">
-<canvas id="canvas" width="400" height="300"></canvas>
-
-<div class="titlebar">
-<div class="line"><b>frames: </b><span id="frame"></span></div>
-<div class="line"><b>programs: </b></br><span id="program_name"></span></div>
-</div>
-
-</div>
-</div>
 
 </body>
 </html>

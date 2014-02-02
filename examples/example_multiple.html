@@ -12,7 +12,35 @@
 }
 </style>
 
-<script type="text/javascript" src="../../glif.min.js"></script>
+<script type="text/javascript" src="../glif.min.js"></script>
+
+</head>
+<body>
+
+<div class="topbar">
+Multiple WebGL Contexts Example
+<a href="https://github.com/gschorno/glif">github</a>
+<a href="../index.html">glif pages</a>
+</div>
+
+<div class="main">
+
+<div class="imgpanel">
+<img src="../images/tree.jpg" id="source_image" alt="input image" height="504" width="423">
+<div class="imginfo">source image</div>
+</div>
+<div class="imgpanel">
+<canvas id="effect_canvas" height="504" width="423"></canvas>
+<div class="imginfo">contrast enhance</div>
+</div>
+<div class="imgpanel">
+<canvas id="blur_canvas" height="504" width="423"></canvas>
+<div class="imginfo">blur</div>
+</div>
+<div class="imgpanel">
+<canvas id="both_canvas" height="504" width="423"></canvas>
+<div class="imginfo">blur + contrast</div>
+</div>
 
 <script>
 
@@ -78,32 +106,6 @@ function apply() {
 
 </script>
 
-</head>
-<body>
-
-<div class="topbar">
-Multiple WebGL Contexts Example
-<a href="../index.html">glif library</a>
-</div>
-
-<div class="main">
-
-<div class="imgpanel">
-<img src="../images/tree.jpg" id="source_image" alt="input image" height="504" width="423">
-<div class="imginfo">source image</div>
-</div>
-<div class="imgpanel">
-<canvas id="effect_canvas" height="504" width="423"></canvas>
-<div class="imginfo">contrast enhance</div>
-</div>
-<div class="imgpanel">
-<canvas id="blur_canvas" height="504" width="423"></canvas>
-<div class="imginfo">blur</div>
-</div>
-<div class="imgpanel">
-<canvas id="both_canvas" height="504" width="423"></canvas>
-<div class="imginfo">blur + contrast</div>
-</div>
 
 </body>
 </html>
