@@ -5,7 +5,7 @@
 **glif** is an experimental javascript library that uses WebGL for 2d image manipulation and image processing.
 
 
-[demo pages](http://http://gschorno.github.io/glif/index.html)
+[demo pages](http://gschorno.github.io/glif/index.html)
 
 
 How To Use
@@ -57,7 +57,7 @@ The files in the examples directory show (what else) examples of using the funct
 For more info on the script expressions please refer to sources for GLSL programming, and the glif source code for the time being. It's experimental. 
 
 
-[Look at all the demos](http://http://gschorno.github.io/glif/index.html)
+[Look at all the demos](http://gschorno.github.io/glif/index.html)
 
 
 
